@@ -1,11 +1,11 @@
 mysql-plugin-mdl-locks
 =======================
 
-show all mdl locks
+This plugin is used to show all MDL locks of mysql 5.5+.
+The behavior of mdl locks has changed in mysql 5.5 . DDL statements may be blocked by MDL locks in some unobvious way like `begin; select * from some table;` and has no way to find out by whom the table is locked. This plugin used a trick way to fetch the MDL lock information and now, you can know who lock the tables through a information schema table.
 
 usage
 -----
-
 
 first, compile the plugin and install in to plugin dir
 
@@ -18,7 +18,7 @@ first, compile the plugin and install in to plugin dir
     
 then, load the plugin into mysql
 
-    mysql> INSTALL PLUGIN MDL_LOCKS SONAME 'proc_vars.so';
+    mysql> INSTALL PLUGIN MDL_LOCKS SONAME 'mdl_Locks.so';
     
 thus, you can found `MDL_LOCKS` table in `information_schema` database
 
