@@ -17,19 +17,20 @@ static ST_FIELD_INFO proc_locks_table_fields[] =
   {"DATABASE", 255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
   {"TABLE",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
   {"TYPE",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
+  {"DURATION", 30,  MYSQL_TYPE_STRING, 0, 0, 0, 0},
   {0, 0, MYSQL_TYPE_NULL, 0, 0, 0, 0}
 };
 
 static const char *type_desc[] =
 {
-  "MDL_INTENTION_EXCLUSIVE",
-  "MDL_SHARED",
-  "MDL_SHARED_HIGH_PRIO",
-  "MDL_SHARED_READ",
-  "MDL_SHARED_WRITE",
-  "MDL_SHARED_NO_WRITE",
-  "MDL_SHARED_NO_READ_WRITE",
-  "MDL_EXCLUSIVE"
+  "INTENTION_EXCLUSIVE",
+  "SHARED",
+  "SHARED_HIGH_PRIO",
+  "SHARED_READ",
+  "SHARED_WRITE",
+  "SHARED_NO_WRITE",
+  "SHARED_NO_READ_WRITE",
+  "EXCLUSIVE"
   //MDL_TYPE_END
 };
 struct MDL_lock;
@@ -85,9 +86,10 @@ static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond)
     table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
     table->field[2]->store(key->name(), key->name_length(), system_charset_info);
     table->field[3]->store(type, strlen(type), system_charset_info);
+    table->field[4]->store("STATEMENT", strlen("STATEMENT"), system_charset_info);
     schema_table_store_record(thd, table);        
   } 
-  while (ticket = stmt_tks++) {
+  while (ticket = tran_tks++) {
     if (ticket) {
       type = type_desc[(int) ticket->get_type()];
     } else {
@@ -98,9 +100,10 @@ static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond)
     table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
     table->field[2]->store(key->name(), key->name_length(), system_charset_info);
     table->field[3]->store(type, strlen(type), system_charset_info);
+    table->field[4]->store("TRANSACTION", strlen("TRANSACTION"), system_charset_info);
     schema_table_store_record(thd, table);        
   } 
-  while (ticket = stmt_tks++) {
+  while (ticket = expl_tks++) {
     if (ticket) {
       type = type_desc[(int) ticket->get_type()];
     } else {
@@ -111,6 +114,7 @@ static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond)
     table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
     table->field[2]->store(key->name(), key->name_length(), system_charset_info);
     table->field[3]->store(type, strlen(type), system_charset_info);
+    table->field[4]->store("EXPLICIT", strlen("EXPLICIT"), system_charset_info);
     schema_table_store_record(thd, table);        
   }
   return; 
