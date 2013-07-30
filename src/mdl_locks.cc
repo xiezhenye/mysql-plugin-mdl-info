@@ -14,10 +14,11 @@ static struct st_mysql_information_schema is_mdl_locks =
 static ST_FIELD_INFO mdl_locks_table_fields[] =
 {
   {"THREAD_ID",    11,   MYSQL_TYPE_LONG,   0, MY_I_S_UNSIGNED, 0, 0},
-  {"DATABASE", 255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
-  {"TABLE",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
-  {"TYPE",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
   {"DURATION", 30,  MYSQL_TYPE_STRING, 0, 0, 0, 0},
+  {"TYPE",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
+  {"NAMESPACE", 30, MYSQL_TYPE_STRING, 0, 0, 0, 0},
+  {"DATABASE", 255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
+  {"NAME",  255,   MYSQL_TYPE_STRING, 0, 0, 0, 0},
   {0, 0, MYSQL_TYPE_NULL, 0, 0, 0, 0}
 };
 
@@ -30,14 +31,30 @@ static const char *type_desc[] =
   "SHARED_WRITE",
   "SHARED_NO_WRITE",
   "SHARED_NO_READ_WRITE",
-  "EXCLUSIVE"
-  //MDL_TYPE_END
+  "EXCLUSIVE",
+  "NULL"  //MDL_TYPE_END
 };
+
+static const char *ns_desc[] = 
+{
+  "GLOBAL",
+  "SCHEMA",
+  "TABLE",
+  "FUNCTION",
+  "PROCEDURE",
+  "TRIGGER",
+  "EVENT",
+  "COMMIT",
+  "NULL"  //NAMESPACE_END
+};
+
 struct MDL_lock;
+typedef MDL_context::Ticket_iterator Ticket_iterator;
 bool schema_table_store_record(THD *thd, TABLE *table);
 static int mdl_locks_init(void *ptr);
 static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond);
-static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond);
+static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration);
+
 static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
 {
   TABLE *table = tables->table;
@@ -55,64 +72,46 @@ static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
     {
       continue;
     }
-    fill_table(thd, cur_thd, table, cond);
+    Hack_MDL_context *hmc;
+    hmc = (Hack_MDL_context *)(&(cur_thd->mdl_context));
+    Ticket_iterator stmt_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_STATEMENT]);
+    fill_table(thd, cur_thd, table, cond, stmt_tks, "STATEMENT");
+    Ticket_iterator tran_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_TRANSACTION]);
+    fill_table(thd, cur_thd, table, cond, tran_tks, "TRANSACTION");
+    Ticket_iterator expl_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_EXPLICIT]);
+    fill_table(thd, cur_thd, table, cond, expl_tks, "EXPLICIT");
   }
   mysql_mutex_unlock(&LOCK_thread_count);
   return 0;
 }
 
-static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond)
+static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration)
 {
-  MDL_ticket *ticket;
-  Hack_MDL_context *hmc;
-  hmc = (Hack_MDL_context *)(&(cur_thd->mdl_context));
-  const char *type;
   MDL_key *key;
-  MDL_context::Ticket_iterator stmt_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_STATEMENT]);
-  while ((ticket = stmt_tks++)) {
-    if (ticket) {
-      type = type_desc[(int) ticket->get_type()];
-    } else {
-      type= "NULL";
+  MDL_lock *lock;
+  MDL_ticket *ticket;
+  const char *type;
+  const char *ns;
+
+  while ((ticket = itr++)) {
+    type = type_desc[(int) ticket->get_type()];
+    lock = ticket->get_lock();
+    if (!lock) {
+      continue;
+    } 
+    key = &(lock->key);
+    if (!key) {
+      continue;
     }
-    key = &(ticket->get_lock()->key);
+    ns = ns_desc[(int) key->mdl_namespace()];
     table->field[0]->store(cur_thd->thread_id);
-    table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
-    table->field[2]->store(key->name(), key->name_length(), system_charset_info);
-    table->field[3]->store(type, strlen(type), system_charset_info);
-    table->field[4]->store("STATEMENT", strlen("STATEMENT"), system_charset_info);
+    table->field[1]->store(duration, strlen(duration), system_charset_info);
+    table->field[2]->store(type, strlen(type), system_charset_info);
+    table->field[3]->store(ns, strlen(ns), system_charset_info);
+    table->field[4]->store(key->db_name(), key->db_name_length(), system_charset_info);
+    table->field[5]->store(key->name(), key->name_length(), system_charset_info);
     schema_table_store_record(thd, table);        
   } 
-  MDL_context::Ticket_iterator tran_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_TRANSACTION]);
-  while ((ticket = tran_tks++)) {
-    if (ticket) {
-      type = type_desc[(int) ticket->get_type()];
-    } else {
-      type= "NULL";
-    }
-    key = &(ticket->get_lock()->key);
-    table->field[0]->store(cur_thd->thread_id);
-    table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
-    table->field[2]->store(key->name(), key->name_length(), system_charset_info);
-    table->field[3]->store(type, strlen(type), system_charset_info);
-    table->field[4]->store("TRANSACTION", strlen("TRANSACTION"), system_charset_info);
-    schema_table_store_record(thd, table);        
-  } 
-  MDL_context::Ticket_iterator expl_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_EXPLICIT]);
-  while ((ticket = expl_tks++)) {
-    if (ticket) {
-      type = type_desc[(int) ticket->get_type()];
-    } else {
-      type= "NULL";
-    }
-    key = &(ticket->get_lock()->key);
-    table->field[0]->store(cur_thd->thread_id);
-    table->field[1]->store(key->db_name(), key->db_name_length(), system_charset_info);
-    table->field[2]->store(key->name(), key->name_length(), system_charset_info);
-    table->field[3]->store(type, strlen(type), system_charset_info);
-    table->field[4]->store("EXPLICIT", strlen("EXPLICIT"), system_charset_info);
-    schema_table_store_record(thd, table);        
-  }
   return; 
 }
 
