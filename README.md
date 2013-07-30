@@ -25,10 +25,10 @@ thus, you can found `MDL_LOCKS` table in `information_schema` database
 try `select * from information_schema.MDL_LOCKS;` and you may got something like
 
     mysql> select * from information_schema.MDL_LOCKS;
-    +-----------+----------+-------+-------------+-------------+
-    | THREAD_ID | DATABASE | TABLE | TYPE        | DURATION    |
-    +-----------+----------+-------+-------------+-------------+
-    |         4 | test     | test  | SHARED_READ | EXPLICIT    |
-    |         5 | mysql    | user  | SHARED_READ | TRANSACTION |
-    +-----------+----------+-------+-------------+-------------+
+    +-----------+-------------+---------------------+-----------+----------+------+
+    | THREAD_ID | DURATION    | TYPE                | NAMESPACE | DATABASE | NAME |
+    +-----------+-------------+---------------------+-----------+----------+------+
+    |         7 | STATEMENT   | INTENTION_EXCLUSIVE | GLOBAL    |          |      |
+    |         7 | TRANSACTION | SHARED_WRITE        | TABLE     | test     | t    |
+    +-----------+-------------+---------------------+-----------+----------+------+
     2 rows in set (0.00 sec)
