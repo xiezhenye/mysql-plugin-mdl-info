@@ -2,7 +2,6 @@
 
 #include "sql_class.h"
 #include "table.h"
-#include "global_threads.h"
 #include "set_var.h"
 
 #include "hack_context.h"
@@ -53,7 +52,7 @@ typedef MDL_context::Ticket_iterator Ticket_iterator;
 bool schema_table_store_record(THD *thd, TABLE *table);
 static int mdl_locks_init(void *ptr);
 static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond);
-static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration);
+static void ticket_fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration);
 
 static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
 {
@@ -63,29 +62,32 @@ static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
   }
 
   mysql_mutex_lock(&LOCK_thread_count);
-  Thread_iterator it= global_thread_list_begin();
-  Thread_iterator end= global_thread_list_end();
-  for (; it != end; ++it)
+  I_List_iterator<THD> it(threads);
+
+  THD *cur_thd;
+  while ((cur_thd= it++))
   {
-    THD *cur_thd = *it;
     if (cur_thd == NULL)
     {
+      continue;
+    }
+    if (! cur_thd->mdl_context.has_locks()) {
       continue;
     }
     Hack_MDL_context *hmc;
     hmc = (Hack_MDL_context *)(&(cur_thd->mdl_context));
     Ticket_iterator stmt_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_STATEMENT]);
-    fill_table(thd, cur_thd, table, cond, stmt_tks, "STATEMENT");
+    ticket_fill_table(thd, cur_thd, table, cond, stmt_tks, "STATEMENT");
     Ticket_iterator tran_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_TRANSACTION]);
-    fill_table(thd, cur_thd, table, cond, tran_tks, "TRANSACTION");
+    ticket_fill_table(thd, cur_thd, table, cond, tran_tks, "TRANSACTION");
     Ticket_iterator expl_tks = MDL_context::Ticket_iterator(hmc->m_tickets[MDL_EXPLICIT]);
-    fill_table(thd, cur_thd, table, cond, expl_tks, "EXPLICIT");
+    ticket_fill_table(thd, cur_thd, table, cond, expl_tks, "EXPLICIT");
   }
   mysql_mutex_unlock(&LOCK_thread_count);
   return 0;
 }
 
-static void fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration)
+static void ticket_fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration)
 {
   MDL_key *key;
   MDL_lock *lock;
@@ -123,13 +125,13 @@ static int mdl_locks_init(void *ptr)
   return 0;
 }
 
-mysql_declare_plugin(proc_vars)
+mysql_declare_plugin(mdl_locks)
 {
   MYSQL_INFORMATION_SCHEMA_PLUGIN,
   &is_mdl_locks,
   "MDL_LOCKS",
   "Xie Zhenye",
-  "Locks",
+  "MDL Locks",
   PLUGIN_LICENSE_GPL,
   mdl_locks_init,
   NULL,
