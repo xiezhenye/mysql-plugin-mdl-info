@@ -3,7 +3,9 @@
 #include "sql_class.h"
 #include "table.h"
 #include "set_var.h"
-
+#if MYSQL_VERSION_ID >= 50600
+#include "global_threads.h"
+#endif
 #include "hack_context.h"
 #include "mdl.cc"
 
@@ -62,11 +64,18 @@ static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
   }
 
   mysql_mutex_lock(&LOCK_thread_count);
-  I_List_iterator<THD> it(threads);
-
   THD *cur_thd;
+#if MYSQL_VERSION_ID < 50600
+  I_List_iterator<THD> it(threads);
   while ((cur_thd= it++))
   {
+#else
+  Thread_iterator it= global_thread_list_begin();
+  Thread_iterator end= global_thread_list_end();
+  for (; it != end; ++it)
+  {
+    cur_thd = *it;
+#endif
     if (cur_thd == NULL)
     {
       continue;
