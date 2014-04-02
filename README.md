@@ -21,14 +21,74 @@ then, load the plugin into mysql
     mysql> INSTALL PLUGIN MDL_LOCKS SONAME 'mdl_Locks.so';
     
 thus, you can found `MDL_LOCKS` table in `information_schema` database
-
-try `select * from information_schema.MDL_LOCKS;` and you may got something like
-
+    
+    mysql> lock tables plugin read;
+    Query OK, 0 rows affected (0.00 sec)
+    
     mysql> select * from information_schema.MDL_LOCKS;
-    +-----------+-------------+---------------------+-----------+----------+------+
-    | THREAD_ID | DURATION    | TYPE                | NAMESPACE | DATABASE | NAME |
-    +-----------+-------------+---------------------+-----------+----------+------+
-    |         7 | STATEMENT   | INTENTION_EXCLUSIVE | GLOBAL    |          |      |
-    |         7 | TRANSACTION | SHARED_WRITE        | TABLE     | test     | t    |
-    +-----------+-------------+---------------------+-----------+----------+------+
+    +-----------+----------+-------------+-----------+----------+--------+
+    | THREAD_ID | DURATION | TYPE        | NAMESPACE | DATABASE | NAME   |
+    +-----------+----------+-------------+-----------+----------+--------+
+    |         4 | EXPLICIT | SHARED_READ | TABLE     | mysql    | plugin |
+    +-----------+----------+-------------+-----------+----------+--------+
+    1 row in set (0.00 sec)
+    
+    mysql> unlock tables;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> lock tables plugin write;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> select * from information_schema.MDL_LOCKS;
+    +-----------+----------+----------------------+-----------+----------+--------+
+    | THREAD_ID | DURATION | TYPE                 | NAMESPACE | DATABASE | NAME   |
+    +-----------+----------+----------------------+-----------+----------+--------+
+    |         4 | EXPLICIT | INTENTION_EXCLUSIVE  | GLOBAL    |          |        |
+    |         4 | EXPLICIT | SHARED_NO_READ_WRITE | TABLE     | mysql    | plugin |
+    |         4 | EXPLICIT | INTENTION_EXCLUSIVE  | SCHEMA    | mysql    |        |
+    +-----------+----------+----------------------+-----------+----------+--------+
+    3 rows in set (0.00 sec)
+    
+    mysql> unlock tables;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> begin;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> select * from plugin;
+    +-----------+--------------+
+    | name      | dl           |
+    +-----------+--------------+
+    | MDL_LOCKS | mdl_locks.so |
+    +-----------+--------------+
+    1 row in set (0.01 sec)
+    
+    mysql> select * from information_schema.MDL_LOCKS;
+    +-----------+-------------+-------------+-----------+----------+--------+
+    | THREAD_ID | DURATION    | TYPE        | NAMESPACE | DATABASE | NAME   |
+    +-----------+-------------+-------------+-----------+----------+--------+
+    |         4 | TRANSACTION | SHARED_READ | TABLE     | mysql    | plugin |
+    +-----------+-------------+-------------+-----------+----------+--------+
+    1 row in set (0.01 sec)
+    
+    mysql> rollback;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> flush tables with read lock;
+    Query OK, 0 rows affected (0.00 sec)
+    
+    mysql> select * from information_schema.MDL_LOCKS;
+    +-----------+----------+--------+-----------+----------+------+
+    | THREAD_ID | DURATION | TYPE   | NAMESPACE | DATABASE | NAME |
+    +-----------+----------+--------+-----------+----------+------+
+    |         4 | EXPLICIT | SHARED | COMMIT    |          |      |
+    |         4 | EXPLICIT | SHARED | GLOBAL    |          |      |
+    +-----------+----------+--------+-----------+----------+------+
     2 rows in set (0.00 sec)
+    
+    mysql> unlock tables;
+    Query OK, 0 rows affected (0.00 sec)
+    
+
+    
+
