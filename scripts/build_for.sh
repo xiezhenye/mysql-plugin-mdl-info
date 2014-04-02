@@ -11,14 +11,14 @@ if [[ -z "$ver" ]]; then
 fi
 cd "$target"
 file="mysql-$ver.tar.gz"
-#wget "http://downloads.mysql.com/archives/get/file/$file"
-#tar -xzvf "$file"
+wget "http://downloads.mysql.com/archives/get/file/$file"
+tar -xzvf "$file"
 cp -r "$cwd/../src" "mysql-$ver/plugin/mdl_locks"
 cd "mysql-$ver"
-#cmake .
+cmake .
 ncpu=$( grep "processor" /proc/cpuinfo | wc -l )
 (( nproc=$ncpu*2 ))
-#make -j $nproc mdl_locks
+make -j $nproc mdl_locks
 cp plugin/mdl_locks/mdl_locks.so "$target"
 
 
