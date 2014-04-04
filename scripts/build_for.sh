@@ -31,5 +31,3 @@ my_ver=$(gawk -F'[()" ]+' '$1=="SET"&&$2=="CPACK_PACKAGE_FILE_NAME"{print $3}' "
 ver="${my_ver#*-}"
 cp plugin/mdl_locks/mdl_locks.so "$target/mdl_locks_$ver.so"
 
-
-
