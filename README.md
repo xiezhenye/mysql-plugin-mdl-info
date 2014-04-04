@@ -4,6 +4,11 @@ mysql-plugin-mdl-locks
 This plugin is used to show all MDL locks of mysql 5.5+.
 The behavior of mdl locks has changed in mysql 5.5 . DDL statements may be blocked by MDL locks in some unobvious way like `begin; select * from some table;` and has no way to find out by whom the table is locked. This plugin used a trick way to fetch the MDL lock information and now, you can know who lock the tables through a information schema table.
 
+
+download
+--------
+[https://github.com/xiezhenye/mysql-plugin-mdl-locks/wiki/downloads](goto download page)
+
 usage
 -----
 
