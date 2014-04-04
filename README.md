@@ -7,7 +7,7 @@ The behavior of mdl locks has changed in mysql 5.5 . DDL statements may be block
 
 download
 --------
-[goto download page](https://github.com/xiezhenye/mysql-plugin-mdl-locks/wiki/downloads)
+You can find some compiled binary files at the [download page](https://github.com/xiezhenye/mysql-plugin-mdl-locks/wiki/downloads), or you can compile it from source by yourself.
 
 usage
 -----
