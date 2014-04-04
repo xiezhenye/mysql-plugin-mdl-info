@@ -10,16 +10,26 @@ if [[ -z "$ver" ]]; then
   exit 1
 fi
 cd "$target"
-file="mysql-$ver.tar.gz"
-#wget "http://downloads.mysql.com/archives/get/file/$file"
-#tar -xzvf "$file"
-cp -r "$cwd/../src" "mysql-$ver/plugin/mdl_locks"
+if [[ ! -e "mysql-$ver" ]]; then
+  file="mysql-$ver.tar.gz"
+  if [[ ! -e "$file" ]]; then
+    wget "http://downloads.mysql.com/archives/get/file/$file"
+  fi
+  tar -xzvf "$file"
+fi
+if [[ ! -e "mysql-$ver/plugin/mdl_locks" ]]; then
+  cp -r "$cwd/../src" "mysql-$ver/plugin/mdl_locks"
+fi
 cd "mysql-$ver"
-#cmake .
-ncpu=$( grep "processor" /proc/cpuinfo | wc -l )
-(( nproc=$ncpu*2 ))
-#make -j $nproc mdl_locks
-cp plugin/mdl_locks/mdl_locks.so "$target"
+if [[ ! -e plugin/mdl_locks/mdl_locks.so ]]; then
+  cmake .
+  ncpu=$( grep "processor" /proc/cpuinfo | wc -l )
+  (( nproc=$ncpu*2 ))
+  make -j $nproc mdl_locks
+fi
+my_ver=$(gawk -F'[()" ]+' '$1=="SET"&&$2=="CPACK_PACKAGE_FILE_NAME"{print $3}' "CPackConfig.cmake")
+ver="${my_ver#*-}"
+cp plugin/mdl_locks/mdl_locks.so "$target/mdl_locks_$ver.so"
 
 
 
