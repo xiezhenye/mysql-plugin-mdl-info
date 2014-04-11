@@ -16,7 +16,7 @@ first, compile the plugin and install in to plugin dir
 
     cp -r src /path/to/mysql-src/plugin/mdl_locks
     cd /path/to/mysql-src
-    cmake .
+    cmake . -DBUILD_CONFIG=mysql_release
     cd plugin/mdl_locks
     make
     make install
