@@ -4,6 +4,7 @@ ver="$1"
 target="${2:-.}"
 target="$(readlink -e "$target")"
 cwd="$(dirname `readlink -e "$0"`)"
+BUILD_CONFIG="${BUILD_CONFIG:-mysql_release}"
 
 if [[ -z "$ver" ]]; then
   echo "usage: ./build_for.sh <mysql version>" >&2
@@ -22,7 +23,7 @@ if [[ ! -e "mysql-$ver/plugin/mdl_locks" ]]; then
 fi
 cd "mysql-$ver"
 if [[ ! -e plugin/mdl_locks/mdl_locks.so ]]; then
-  cmake .
+  cmake . -DBUILD_CONFIG="${BUILD_CONFIG}"
   ncpu=$( grep "processor" /proc/cpuinfo | wc -l )
   (( nproc=$ncpu*2 ))
   make -j $nproc mdl_locks
