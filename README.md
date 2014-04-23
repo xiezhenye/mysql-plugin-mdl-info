@@ -18,7 +18,7 @@ first, compile the plugin and install in to plugin dir
     
 then, load the plugin into mysql
 
-    mysql> INSTALL PLUGIN MDL_LOCKS SONAME 'mdl_Locks.so';
+    mysql> INSTALL PLUGIN MDL_LOCKS SONAME 'mdl_locks.so';
     
 thus, you can found `MDL_LOCKS` table in `information_schema` database
     
