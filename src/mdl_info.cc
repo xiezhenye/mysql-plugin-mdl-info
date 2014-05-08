@@ -9,10 +9,10 @@
 #include "hack_context.h"
 #include "mdl.cc"
 
-static struct st_mysql_information_schema is_mdl_locks =
+static struct st_mysql_information_schema is_mdl_info =
 { MYSQL_INFORMATION_SCHEMA_INTERFACE_VERSION };
 
-static ST_FIELD_INFO mdl_locks_table_fields[] =
+static ST_FIELD_INFO mdl_info_table_fields[] =
 {
   {"THREAD_ID",    11,   MYSQL_TYPE_LONG,   0, MY_I_S_UNSIGNED, 0, 0},
   {"DURATION", 30,  MYSQL_TYPE_STRING, 0, 0, 0, 0},
@@ -52,11 +52,11 @@ static const char *ns_desc[] =
 struct MDL_lock;
 typedef MDL_context::Ticket_iterator Ticket_iterator;
 bool schema_table_store_record(THD *thd, TABLE *table);
-static int mdl_locks_init(void *ptr);
-static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond);
+static int mdl_info_init(void *ptr);
+static int mdl_info_fill_table(THD *thd, TABLE_LIST *tables, Item *cond);
 static void ticket_fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, Ticket_iterator itr, const char *duration);
 
-static int mdl_locks_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
+static int mdl_info_fill_table(THD *thd, TABLE_LIST *tables, Item *cond)
 {
   TABLE *table = tables->table;
   if (thd->killed != 0) {
@@ -126,23 +126,23 @@ static void ticket_fill_table(THD *thd, THD *cur_thd, TABLE *table, Item *cond, 
   return; 
 }
 
-static int mdl_locks_init(void *ptr)
+static int mdl_info_init(void *ptr)
 {
   ST_SCHEMA_TABLE *schema_table = (ST_SCHEMA_TABLE *)ptr;
-  schema_table->fields_info = mdl_locks_table_fields;
-  schema_table->fill_table = mdl_locks_fill_table;
+  schema_table->fields_info = mdl_info_table_fields;
+  schema_table->fill_table = mdl_info_fill_table;
   return 0;
 }
 
-mysql_declare_plugin(mdl_locks)
+mysql_declare_plugin(mdl_info)
 {
   MYSQL_INFORMATION_SCHEMA_PLUGIN,
-  &is_mdl_locks,
-  "MDL_LOCKS",
+  &is_mdl_info,
+  "MDL_INFO",
   "Xie Zhenye",
   "MDL Locks",
   PLUGIN_LICENSE_GPL,
-  mdl_locks_init,
+  mdl_info_init,
   NULL,
   0x0100,
   NULL,
